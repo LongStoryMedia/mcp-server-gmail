@@ -35,5 +35,5 @@ USER mcp
 # Expose port for streaming HTTP transport
 EXPOSE 8000
 
-# Default command - run MCP server with HTTP transport using FastMCP CLI
-CMD ["uv", "run", "fastmcp", "run", "server.py:mcp", "--transport", "http", "--host", "0.0.0.0", "--port", "8000"]
+# Default command - run server directly so mcp.run() mounts all OAuth routes
+CMD ["python", "server.py"]
