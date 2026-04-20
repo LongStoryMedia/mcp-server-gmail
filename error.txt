@@ -1,30 +1,39 @@
-01:07:54 lsm@lsedge mcp-gateway ±|main✔|→ k logs -n llmmllab-mcp -l app=mcp-server-gmail -f
-Downloading pygments (1.2MiB)
-Downloading cryptography (4.1MiB)
-Downloading beartype (1.3MiB)
-Downloading google-api-python-client (14.3MiB)
- Downloaded pydantic-core
- Downloaded cryptography
- Downloaded pygments
- Downloaded beartype
- Downloaded google-api-python-client
-Installed 88 packages in 304ms
-INFO:     10.42.0.87:45088 - "GET /.well-known/oauth-protected-resource HTTP/1.1" 404 Not Found
-INFO:     10.42.0.87:45104 - "GET /.well-known/oauth-authorization-server HTTP/1.1" 404 Not Found
-INFO:     10.42.0.87:45106 - "GET /.well-known/openid-configuration HTTP/1.1" 404 Not Found
-INFO:     10.42.0.87:45116 - "POST /register HTTP/1.1" 404 Not Found
-INFO:     10.42.0.87:52280 - "POST /mcp HTTP/1.1" 200 OK
-INFO:     10.42.0.87:52288 - "POST /mcp HTTP/1.1" 202 Accepted
-INFO:     10.42.0.87:52296 - "GET /mcp HTTP/1.1" 200 OK
-INFO:     10.42.0.87:52312 - "POST /mcp HTTP/1.1" 200 OK
-INFO:     10.42.0.87:52314 - "POST /mcp HTTP/1.1" 200 OK
-INFO:     10.42.0.87:52322 - "POST /mcp HTTP/1.1" 200 OK
-/app/.venv/lib/python3.12/site-packages/authlib/_joserfc_helpers.py:8: AuthlibDeprecationWarning: authlib.jose module is deprecated, please use joserfc instead.
-It will be compatible before version 2.0.0.
-  from authlib.jose import ECKey
-[04/20/26 18:08:00] WARNING  Using non-secure cookies for           proxy.py:486
-                             development; deploy with HTTPS for                 
-                             production.                                        
-[04/20/26 18:08:01] ERROR    Failed to run server: Issuer URL must be run.py:268
-                             HTTPS                                              
+❯ /mcp                                                                                                                                                                                                            
+╭────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Mcp-server-gmail MCP Server                                                                                                                                                                                    │
+│                                                                                                                                                                                                                │
+│ Status: △ needs authentication                                                                                                                                                                                 │
+│ Auth: ✘ not authenticated                                                                                                                                                                                      │
+│ URL: http://192.168.0.71:50000/mcp                                                                                                                                                                             │
+│ Config location: /home/lsm/.claude.json                                                                                                                                                                        │
+│                                                                                                                                                                                                                │
+│ Error: SDK auth failed: HTTP 404: Invalid OAuth error response: SyntaxError: JSON Parse error: Unexpected identifier "Not". Raw body: Not Found                                                                │
+│                                                                                                                                                                                                                │
+│ ❯ 1. Authenticate                                                                                                                                                                                              │
+│   2. Disable                                                                                                                                                                                                   │
+╰───────────
 
+INFO:     10.42.0.87:54822 - "GET /.well-known/oauth-protected-resource/mcp HTTP/1.1" 404 Not Found
+INFO:     10.42.0.87:54836 - "GET /.well-known/oauth-protected-resource HTTP/1.1" 404 Not Found
+INFO:     10.42.0.87:54846 - "GET /.well-known/oauth-authorization-server HTTP/1.1" 404 Not Found
+INFO:     10.42.0.87:54848 - "GET /.well-known/openid-configuration HTTP/1.1" 404 Not Found
+INFO:     10.42.0.87:54860 - "GET /.well-known/oauth-authorization-server/mcp HTTP/1.1" 404 Not Found
+INFO:     10.42.0.87:54876 - "GET /.well-known/openid-configuration/mcp HTTP/1.1" 404 Not Found
+INFO:     10.42.0.87:54882 - "GET /mcp/.well-known/openid-configuration HTTP/1.1" 404 Not Found
+INFO:     10.42.0.87:54890 - "GET /.well-known/oauth-protected-resource/mcp HTTP/1.1" 404 Not Found
+INFO:     10.42.0.87:54902 - "GET /.well-known/oauth-protected-resource HTTP/1.1" 404 Not Found
+INFO:     10.42.0.87:54904 - "GET /.well-known/oauth-authorization-server HTTP/1.1" 404 Not Found
+INFO:     10.42.0.87:54912 - "GET /.well-known/openid-configuration HTTP/1.1" 404 Not Found
+INFO:     10.42.0.87:54928 - "POST /register HTTP/1.1" 404 Not Found
+INFO:     10.42.1.1:51258 - "GET /mcp HTTP/1.1" 401 Unauthorized
+[04/20/26 22:24:35] INFO     Auth error returned: invalid_token middleware.py:92
+                             (status=401)                                       
+INFO:     10.42.1.1:37186 - "GET /mcp HTTP/1.1" 401 Unauthorized
+[04/20/26 22:24:45] INFO     Auth error returned: invalid_token middleware.py:92
+                             (status=401)                                       
+INFO:     10.42.1.1:37190 - "GET /mcp HTTP/1.1" 401 Unauthorized
+INFO:     10.42.1.1:37196 - "GET /mcp HTTP/1.1" 401 Unauthorized
+                    INFO     Auth error returned: invalid_token middleware.py:92
+                             (status=401)                                       
+                    INFO     Auth error returned: invalid_token middleware.py:92
+                             (status=401)    
