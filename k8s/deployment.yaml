@@ -23,16 +23,40 @@ spec:
             - name: http
               containerPort: 8000
               protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: /mcp
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /mcp
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 30
           env:
-            # No OAuth - internal MCP server without authentication
-            # Gmail API credentials are secured via Kubernetes secret
-            # Google OAuth credentials - set via secret
+            # --- OAuth / Dex configuration ---
+            # Setting MCP_SERVER_BASE_URL activates OAuth (see server.py)
+            - name: MCP_SERVER_BASE_URL
+              value: "http://mcp-server-gmail.llmmllab-mcp.svc.cluster.local:8000"
+            - name: DEX_ISSUER
+              value: "https://auth.longstorymedia.com"
+            - name: DEX_INTERNAL_URL
+              value: "http://dex.auth.svc.cluster.local:5556"
+            - name: OAUTH_CLIENT_ID
+              value: "gmail-mcp-client"
+            - name: OAUTH_JWT_SIGNING_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: gmail-mcp-oauth
+                  key: jwt-signing-key
+            # --- Google Gmail API credentials ---
             - name: GOOGLE_CREDENTIALS_JSON
               valueFrom:
                 secretKeyRef:
                   name: gmail-secrets
                   key: credentials.json
-            # Volume mounts for persistent tokens and jobs
           volumeMounts:
             - name: gmail-tokens
               mountPath: /home/mcp/.gmail-tokens

@@ -5,29 +5,19 @@ It is designed to run in a Docker container and can be configured using environm
 """
 
 import os
-import sys
 import time
 from typing import Any
 from httpx import HTTPError
 from fastmcp import FastMCP
-from starlette.requests import Request
-from starlette.responses import JSONResponse
 
-# Get or create the shared mcp object
-# Use sys.modules to ensure the same instance across different import contexts
-def _get_mcp():
-    """Lazy initialization of mcp to ensure single instance."""
-    if "_gmail_mcp_instance" not in sys.modules:
-        mcp_server_base_url = os.environ.get("MCP_SERVER_BASE_URL")
-        if mcp_server_base_url:
-            from oauth_provider import create_oauth_provider
-            auth = create_oauth_provider()
-            sys.modules["_gmail_mcp_instance"] = FastMCP("gmail", auth=auth)
-        else:
-            sys.modules["_gmail_mcp_instance"] = FastMCP("gmail", auth=None)
-    return sys.modules["_gmail_mcp_instance"]
+# Initialize FastMCP with OAuth if MCP_SERVER_BASE_URL is set
+_mcp_server_base_url = os.environ.get("MCP_SERVER_BASE_URL")
+if _mcp_server_base_url:
+    from oauth_provider import create_oauth_provider
 
-mcp = _get_mcp()
+    mcp = FastMCP("gmail", auth=create_oauth_provider())
+else:
+    mcp = FastMCP("gmail", auth=None)
 
 # Import GmailService for tool implementations
 from gmail import GmailService
@@ -64,8 +54,11 @@ def read_email_impl(message_id: str) -> dict[str, Any]:
             text = ""
             if part.body and part.body.data:
                 import base64
+
                 try:
-                    decoded = base64.urlsafe_b64decode(part.body.data).decode("utf-8", errors="replace")
+                    decoded = base64.urlsafe_b64decode(part.body.data).decode(
+                        "utf-8", errors="replace"
+                    )
                     if part.mimeType == "text/html":
                         html = decoded
                     elif part.mimeType == "text/plain":
@@ -93,15 +86,17 @@ def read_email_impl(message_id: str) -> dict[str, Any]:
         }
 
 
-
 # Tool: grep_email
 @mcp.tool(
     name="grep_email",
     description="Search email bodies for a pattern. Returns matching emails with context lines before and after the match (like grep -C).",
 )
-def grep_email_impl(query: str, pattern: str, max_results: int = 10, context: int = 2) -> list[dict[str, Any]]:
+def grep_email_impl(
+    query: str, pattern: str, max_results: int = 10, context: int = 2
+) -> list[dict[str, Any]]:
     """Search email bodies for a pattern match with context lines."""
     import re
+
     results = []
     page_token = None
 
@@ -109,7 +104,9 @@ def grep_email_impl(query: str, pattern: str, max_results: int = 10, context: in
         count = 0
         while count < max_results:
             try:
-                msgRes = service.get_messages(query=query, page_token=page_token, max_results=100)
+                msgRes = service.get_messages(
+                    query=query, page_token=page_token, max_results=100
+                )
             except HTTPError:
                 break
 
@@ -124,8 +121,11 @@ def grep_email_impl(query: str, pattern: str, max_results: int = 10, context: in
                     text = ""
                     if part.body and part.body.data:
                         import base64
+
                         try:
-                            decoded = base64.urlsafe_b64decode(part.body.data).decode("utf-8", errors="replace")
+                            decoded = base64.urlsafe_b64decode(part.body.data).decode(
+                                "utf-8", errors="replace"
+                            )
                             if part.mimeType == "text/plain":
                                 text = decoded
                         except Exception:
@@ -157,7 +157,9 @@ def grep_email_impl(query: str, pattern: str, max_results: int = 10, context: in
                     match_indices = set()
                     for i, line in enumerate(lines):
                         if re.search(pattern, line, re.IGNORECASE):
-                            for j in range(max(0, i - context), min(len(lines), i + context + 1)):
+                            for j in range(
+                                max(0, i - context), min(len(lines), i + context + 1)
+                            ):
                                 match_indices.add(j)
 
                     matches = []
@@ -168,12 +170,14 @@ def grep_email_impl(query: str, pattern: str, max_results: int = 10, context: in
                             prefix = ">>"
                         matches.append(f"{prefix} {line}")
 
-                    results.append({
-                        "id": message.id,
-                        "sender": sender,
-                        "subject": subject,
-                        "matches": matches,
-                    })
+                    results.append(
+                        {
+                            "id": message.id,
+                            "sender": sender,
+                            "subject": subject,
+                            "matches": matches,
+                        }
+                    )
                     count += 1
 
             page_token = msgRes.nextPageToken
@@ -181,6 +185,7 @@ def grep_email_impl(query: str, pattern: str, max_results: int = 10, context: in
                 break
 
     return results
+
 
 # Tool: count_emails
 @mcp.tool(
@@ -195,7 +200,9 @@ def count_emails_impl(query: str) -> int:
     with GmailService() as service:
         while True:
             try:
-                msgRes = service.get_messages(query=query, page_token=page_token, max_results=100)
+                msgRes = service.get_messages(
+                    query=query, page_token=page_token, max_results=100
+                )
             except HTTPError as e:
                 if "429" in str(e) and total_count == 0:
                     time.sleep(1)
@@ -226,7 +233,9 @@ def search_emails_impl(query: str, max_results: int = 10) -> list[dict[str, Any]
         count = 0
         while count < max_results:
             try:
-                msgRes = service.get_messages(query=query, page_token=page_token, max_results=100)
+                msgRes = service.get_messages(
+                    query=query, page_token=page_token, max_results=100
+                )
             except HTTPError:
                 break
 
@@ -235,11 +244,13 @@ def search_emails_impl(query: str, max_results: int = 10) -> list[dict[str, Any]
                 if count >= max_results:
                     break
                 message = service.get_message(msg.id)
-                results.append({
-                    "id": message.id,
-                    "snippet": message.snippet,
-                    "labels": message.labelIds or [],
-                })
+                results.append(
+                    {
+                        "id": message.id,
+                        "snippet": message.snippet,
+                        "labels": message.labelIds or [],
+                    }
+                )
                 count += 1
 
             page_token = msgRes.nextPageToken
@@ -254,7 +265,9 @@ def search_emails_impl(query: str, max_results: int = 10) -> list[dict[str, Any]
     name="delete_emails",
     description="Delete emails matching the query.",
 )
-def delete_emails_impl(query: str, max_results: int = 100, dry_run: bool = False) -> dict[str, Any]:
+def delete_emails_impl(
+    query: str, max_results: int = 100, dry_run: bool = False
+) -> dict[str, Any]:
     """Delete emails matching the query."""
     message_ids = []
     page_token = None
@@ -262,7 +275,9 @@ def delete_emails_impl(query: str, max_results: int = 100, dry_run: bool = False
     with GmailService() as service:
         while len(message_ids) < max_results:
             try:
-                msgRes = service.get_messages(query=query, page_token=page_token, max_results=100)
+                msgRes = service.get_messages(
+                    query=query, page_token=page_token, max_results=100
+                )
             except HTTPError:
                 break
 
@@ -277,7 +292,12 @@ def delete_emails_impl(query: str, max_results: int = 100, dry_run: bool = False
             return {"found": 0, "deleted": 0, "message": "No emails found"}
 
         if dry_run:
-            return {"found": len(message_ids), "deleted": 0, "dry_run": True, "ids": message_ids[:10]}
+            return {
+                "found": len(message_ids),
+                "deleted": 0,
+                "dry_run": True,
+                "ids": message_ids[:10],
+            }
 
         trashed = service.trash_messages(message_ids)
         return {"found": len(message_ids), "trashed": trashed, "dry_run": False}
@@ -288,7 +308,9 @@ def delete_emails_impl(query: str, max_results: int = 100, dry_run: bool = False
     name="add_label_to_emails",
     description="Add a label to emails matching the query.",
 )
-def add_label_to_emails_impl(query: str, label_name: str, max_results: int = 100) -> dict[str, Any]:
+def add_label_to_emails_impl(
+    query: str, label_name: str, max_results: int = 100
+) -> dict[str, Any]:
     """Add a label to emails matching the query."""
     with GmailService() as service:
         label = service.get_or_create_label(label_name)
@@ -298,7 +320,9 @@ def add_label_to_emails_impl(query: str, label_name: str, max_results: int = 100
 
         while len(message_ids) < max_results:
             try:
-                msgRes = service.get_messages(query=query, page_token=page_token, max_results=100)
+                msgRes = service.get_messages(
+                    query=query, page_token=page_token, max_results=100
+                )
             except HTTPError:
                 break
 
@@ -321,7 +345,9 @@ def add_label_to_emails_impl(query: str, label_name: str, max_results: int = 100
     name="get_or_create_label",
     description="Get a label ID or create it if it doesn't exist.",
 )
-def get_or_create_label_impl(label_name: str, color: str | None = None) -> dict[str, Any]:
+def get_or_create_label_impl(
+    label_name: str, color: str | None = None
+) -> dict[str, Any]:
     """Get label ID or create label if it doesn't exist."""
     with GmailService() as service:
         label = service.get_or_create_label(label_name, color)
@@ -349,38 +375,22 @@ def list_labels_impl() -> list[dict[str, Any]]:
     """List all labels in the Gmail account."""
     with GmailService() as service:
         labels = service.list_labels()
-        return [{"id": label.id, "name": label.name, "color": label.color} for label in labels]
+        return [
+            {"id": label.id, "name": label.name, "color": label.color}
+            for label in labels
+        ]
 
 
-# Custom routes for OAuth discovery
-@mcp.custom_route("/mcp/.well-known/oauth-authorization-server", methods=["GET"])
-async def oauth_discovery_mcp(request: Request):
-    """Return JSON 404 for OAuth discovery at /mcp/.well-known."""
-    return JSONResponse(status_code=404, content={"error": "oauth_not_configured", "message": "OAuth is not configured"})
+# NOTE: Do not add custom routes for /.well-known/oauth-* endpoints.
+# When auth is enabled, FastMCP's OAuthProxy registers these automatically.
+# Custom 404 routes would shadow the real OAuth discovery endpoints.
 
 
-@mcp.custom_route("/.well-known/oauth-authorization-server", methods=["GET"])
-async def oauth_discovery_root(request: Request):
-    """Return JSON 404 for OAuth discovery at root."""
-    return JSONResponse(status_code=404, content={"error": "oauth_not_configured", "message": "OAuth is not configured"})
-
-
-@mcp.custom_route("/mcp/.well-known/oauth-protected-resource", methods=["GET"])
-async def oauth_protected_mcp(request: Request):
-    """Return JSON 404 for OAuth protected resource at /mcp/.well-known."""
-    return JSONResponse(status_code=404, content={"error": "oauth_not_configured", "message": "OAuth is not configured"})
-
-
-@mcp.custom_route("/.well-known/oauth-protected-resource", methods=["GET"])
-async def oauth_protected_root(request: Request):
-    """Return JSON 404 for OAuth protected resource at root."""
-    return JSONResponse(status_code=404, content={"error": "oauth_not_configured", "message": "OAuth is not configured"})
-
-
-# Check transport mode via environment variable
-transport_mode = os.environ.get("MCP_TRANSPORT", "http")
-
-if transport_mode == "stdio":
-    mcp.run(transport="stdio")
-else:
-    mcp.run(transport="http", host="0.0.0.0", port=8000)
+# When run directly (python server.py), start the server.
+# When imported by `fastmcp run server.py:mcp`, the CLI handles startup.
+if __name__ == "__main__":
+    transport_mode = os.environ.get("MCP_TRANSPORT", "http")
+    if transport_mode == "stdio":
+        mcp.run(transport="stdio")
+    else:
+        mcp.run(transport="http", host="0.0.0.0", port=8000)
