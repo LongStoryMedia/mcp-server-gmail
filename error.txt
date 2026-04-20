@@ -4,36 +4,13 @@
 │                                                                                                                                                                                                                │
 │ Status: △ needs authentication                                                                                                                                                                                 │
 │ Auth: ✘ not authenticated                                                                                                                                                                                      │
-│ URL: http://192.168.0.71:50000/mcp                                                                                                                                                                             │
+│ URL: http://192.168.0.71:50000/mcp                                                                                                                                                                    0 tokens │
 │ Config location: /home/lsm/.claude.json                                                                                                                                                                        │
 │                                                                                                                                                                                                                │
-│ Error: SDK auth failed: HTTP 404: Invalid OAuth error response: SyntaxError: JSON Parse error: Unexpected identifier "Not". Raw body: Not Found                                                                │
+│ Error: SDK auth failed: Protected resource https://mcp.longstorymedia.com/mcp does not match expected http://192.168.0.71:50000/mcp (or origin)                                                                │
 │                                                                                                                                                                                                                │
 │ ❯ 1. Authenticate                                                                                                                                                                                              │
 │   2. Disable                                                                                                                                                                                                   │
-╰───────────
+╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
 
-INFO:     10.42.0.87:54822 - "GET /.well-known/oauth-protected-resource/mcp HTTP/1.1" 404 Not Found
-INFO:     10.42.0.87:54836 - "GET /.well-known/oauth-protected-resource HTTP/1.1" 404 Not Found
-INFO:     10.42.0.87:54846 - "GET /.well-known/oauth-authorization-server HTTP/1.1" 404 Not Found
-INFO:     10.42.0.87:54848 - "GET /.well-known/openid-configuration HTTP/1.1" 404 Not Found
-INFO:     10.42.0.87:54860 - "GET /.well-known/oauth-authorization-server/mcp HTTP/1.1" 404 Not Found
-INFO:     10.42.0.87:54876 - "GET /.well-known/openid-configuration/mcp HTTP/1.1" 404 Not Found
-INFO:     10.42.0.87:54882 - "GET /mcp/.well-known/openid-configuration HTTP/1.1" 404 Not Found
-INFO:     10.42.0.87:54890 - "GET /.well-known/oauth-protected-resource/mcp HTTP/1.1" 404 Not Found
-INFO:     10.42.0.87:54902 - "GET /.well-known/oauth-protected-resource HTTP/1.1" 404 Not Found
-INFO:     10.42.0.87:54904 - "GET /.well-known/oauth-authorization-server HTTP/1.1" 404 Not Found
-INFO:     10.42.0.87:54912 - "GET /.well-known/openid-configuration HTTP/1.1" 404 Not Found
-INFO:     10.42.0.87:54928 - "POST /register HTTP/1.1" 404 Not Found
-INFO:     10.42.1.1:51258 - "GET /mcp HTTP/1.1" 401 Unauthorized
-[04/20/26 22:24:35] INFO     Auth error returned: invalid_token middleware.py:92
-                             (status=401)                                       
-INFO:     10.42.1.1:37186 - "GET /mcp HTTP/1.1" 401 Unauthorized
-[04/20/26 22:24:45] INFO     Auth error returned: invalid_token middleware.py:92
-                             (status=401)                                       
-INFO:     10.42.1.1:37190 - "GET /mcp HTTP/1.1" 401 Unauthorized
-INFO:     10.42.1.1:37196 - "GET /mcp HTTP/1.1" 401 Unauthorized
-                    INFO     Auth error returned: invalid_token middleware.py:92
-                             (status=401)                                       
-                    INFO     Auth error returned: invalid_token middleware.py:92
-                             (status=401)    
+↑↓ to navigate · Enter to select · Esc to back
