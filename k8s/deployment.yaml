@@ -38,8 +38,10 @@ spec:
           env:
             # --- OAuth / Dex configuration ---
             # Setting MCP_SERVER_BASE_URL activates OAuth (see server.py)
+            # Must be HTTPS — the public URL clients and browsers use.
+            # TLS is terminated at the gateway; the pod runs plain HTTP.
             - name: MCP_SERVER_BASE_URL
-              value: "http://mcp-server-gmail.llmmllab-mcp.svc.cluster.local:8000"
+              value: "https://mcp.longstorymedia.com"
             - name: DEX_ISSUER
               value: "https://auth.longstorymedia.com"
             - name: DEX_INTERNAL_URL
