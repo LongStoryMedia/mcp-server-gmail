@@ -1,0 +1,105 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mcp-server-gmail
+  namespace: llmmllab-mcp
+  labels:
+    app: mcp-server-gmail
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mcp-server-gmail
+  template:
+    metadata:
+      labels:
+        app: mcp-server-gmail
+    spec:
+      containers:
+        - name: mcp-server-gmail
+          image: 192.168.0.71:31500/mcp-server-gmail:latest
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 8000
+              protocol: TCP
+          env:
+            # No OAuth - internal MCP server without authentication
+            # Gmail API credentials are secured via Kubernetes secret
+            # Google OAuth credentials - set via secret
+            - name: GOOGLE_CREDENTIALS_JSON
+              valueFrom:
+                secretKeyRef:
+                  name: gmail-secrets
+                  key: credentials.json
+            # Volume mounts for persistent tokens and jobs
+          volumeMounts:
+            - name: gmail-tokens
+              mountPath: /home/mcp/.gmail-tokens
+            - name: gmail-jobs
+              mountPath: /home/mcp/.gmail-jobs
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+      volumes:
+        - name: gmail-tokens
+          persistentVolumeClaim:
+            claimName: gmail-tokens-pvc
+        - name: gmail-jobs
+          persistentVolumeClaim:
+            claimName: gmail-jobs-pvc
+      imagePullSecrets:
+        - name: registry-secret
+      nodeSelector:
+        kubernetes.io/arch: arm64
+
+---
+# Service for Gmail MCP Server (internal cluster access)
+apiVersion: v1
+kind: Service
+metadata:
+  name: mcp-server-gmail
+  namespace: llmmllab-mcp
+  labels:
+    app: mcp-server-gmail
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 8000
+      targetPort: 8000
+      protocol: TCP
+  selector:
+    app: mcp-server-gmail
+
+---
+# PVC for Gmail OAuth tokens (persisted after OAuth flow)
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: gmail-tokens-pvc
+  namespace: llmmllab-mcp
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Mi
+
+---
+# PVC for Gmail scheduled jobs persistence
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: gmail-jobs-pvc
+  namespace: llmmllab-mcp
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Mi
