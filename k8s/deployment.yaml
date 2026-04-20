@@ -24,14 +24,12 @@ spec:
               containerPort: 8000
               protocol: TCP
           readinessProbe:
-            httpGet:
-              path: /mcp
+            tcpSocket:
               port: http
             initialDelaySeconds: 5
             periodSeconds: 10
           livenessProbe:
-            httpGet:
-              path: /mcp
+            tcpSocket:
               port: http
             initialDelaySeconds: 10
             periodSeconds: 30

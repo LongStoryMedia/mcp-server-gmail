@@ -35,5 +35,7 @@ USER mcp
 # Expose port for streaming HTTP transport
 EXPOSE 8000
 
-# Default command - run server directly so mcp.run() mounts all OAuth routes
-CMD ["python", "server.py"]
+# Default command - use `uv run` to resolve the project venv, then
+# `python server.py` so __name__=="__main__" triggers mcp.run() which
+# mounts the full OAuth middleware + discovery routes.
+CMD ["uv", "run", "python", "server.py"]
