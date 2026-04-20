@@ -43,8 +43,8 @@ if ! kubectl get secret gmail-mcp-oauth -n "$NAMESPACE" >/dev/null 2>&1; then
     echo "Generating OAuth JWT signing key..."
     JWT_KEY=$(openssl rand -hex 32)
     kubectl create secret generic gmail-mcp-oauth \
-        -n "$NAMESPACE" \
-        --from-literal=jwt-signing-key="$JWT_KEY"
+    -n "$NAMESPACE" \
+    --from-literal=jwt-signing-key="$JWT_KEY"
 else
     echo "OAuth JWT signing key secret already exists, skipping."
 fi
@@ -52,6 +52,7 @@ fi
 # Apply PVCs and deployment
 echo "Applying Gmail MCP Server deployment..."
 kubectl apply -f k8s/deployment.yaml
+kubectl apply -f k8s/referencegrant.yaml
 
 echo ""
 echo "=== Installation Complete ==="
