@@ -4,15 +4,13 @@ This server listens for MCP requests and processes them using the FastMCP framew
 It is designed to run in a Docker container and can be configured using environment variables.
 """
 
-import os
 import time
 from typing import Any
 from httpx import HTTPError
 from fastmcp import FastMCP
 
-# Initialize FastMCP with OAuth if MCP_SERVER_BASE_URL is set
-_mcp_server_base_url = os.environ.get("MCP_SERVER_BASE_URL")
-if _mcp_server_base_url:
+from config import MCP_SERVER_BASE_URL, MCP_TRANSPORT
+if MCP_SERVER_BASE_URL:
     from oauth_provider import create_oauth_provider
 
     mcp = FastMCP("gmail", auth=create_oauth_provider())
@@ -389,7 +387,7 @@ def list_labels_impl() -> list[dict[str, Any]]:
 # When run directly (python server.py), start the server.
 # When imported by `fastmcp run server.py:mcp`, the CLI handles startup.
 if __name__ == "__main__":
-    transport_mode = os.environ.get("MCP_TRANSPORT", "http")
+    transport_mode = MCP_TRANSPORT
     if transport_mode == "stdio":
         mcp.run(transport="stdio")
     else:

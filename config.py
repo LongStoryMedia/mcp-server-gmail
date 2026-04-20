@@ -36,6 +36,18 @@ JOB_ENABLED = "enabled"
 JOB_DISABLED = "disabled"
 JOB_FAILED_COUNT_THRESHOLD = 5
 
+# Server configuration
+MCP_SERVER_BASE_URL = os.environ.get("MCP_SERVER_BASE_URL")
+MCP_TRANSPORT = os.environ.get("MCP_TRANSPORT", "http")
+
+# OAuth / Dex configuration
+DEX_ISSUER = os.environ.get("DEX_ISSUER", "https://auth.longstorymedia.com")
+DEX_INTERNAL_URL = os.environ.get(
+    "DEX_INTERNAL_URL", "http://dex.auth.svc.cluster.local:5556"
+)
+OAUTH_CLIENT_ID = os.environ.get("OAUTH_CLIENT_ID", "gmail-mcp-client")
+OAUTH_JWT_SIGNING_KEY = os.environ.get("OAUTH_JWT_SIGNING_KEY")
+
 
 def ensure_jobs_dir() -> None:
     """Ensure the jobs directory exists."""
