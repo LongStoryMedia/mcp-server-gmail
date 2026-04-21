@@ -1,18 +1,15 @@
 """
 OAuth provider configuration for Gmail MCP Server using Dex as the identity provider.
 
-This module sets up OIDCProxy to work with the existing Dex OIDC infrastructure.
+This module sets up OAuthProxy to work with the existing Dex infrastructure.
 
-Dex exposes a standard /.well-known/openid-configuration endpoint.  OIDCProxy
-auto-discovers the authorization, token, and JWKS endpoints from it, and
-properly handles the required `openid` scope that Dex mandates.
-
-We fetch the OIDC config from the internal k8s URL (server-to-server) but the
-discovered endpoints will use the public issuer URL (because Dex advertises
-its `issuer` as the base), which is correct for browser redirects.
+Dex's issuer (public URL used in JWT tokens) differs from the internal k8s
+service URL.  The browser-facing authorization endpoint must use the public
+issuer so the user's browser can reach Dex.  The token and JWKS endpoints are
+called server-to-server and should use the in-cluster DNS name.
 """
 
-from fastmcp.server.auth.oidc_proxy import OIDCProxy
+from fastmcp.server.auth import OAuthProxy
 from fastmcp.server.auth.providers.jwt import JWTVerifier
 
 from config import (
@@ -24,9 +21,9 @@ from config import (
 )
 
 
-def create_oauth_provider() -> OIDCProxy:
+def create_oauth_provider() -> OAuthProxy:
     """
-    Create an OIDCProxy configured to work with Dex.
+    Create an OAuthProxy configured to work with Dex.
 
     Configuration is loaded from config.py (driven by environment variables).
     """
@@ -38,28 +35,41 @@ def create_oauth_provider() -> OIDCProxy:
             "that have no client_secret)"
         )
 
-    # Custom token verifier using internal JWKS endpoint (server-to-server)
-    # but validating against the public issuer claim.
+    # Validate upstream tokens (Dex JWTs) using the internal JWKS endpoint
+    # but matching the public issuer claim.
+    # NOTE: Do NOT set required_scopes here. This verifier validates the
+    # upstream Dex token during code exchange, but its required_scopes also
+    # propagate to the FastMCP-issued JWT validation. Dex may not include
+    # "openid" in the token response's scope field, causing FastMCP's own
+    # JWT to lack that scope and fail validation on subsequent requests.
+    # The openid scope requirement for Dex's auth endpoint is handled by
+    # extra_authorize_params below.
     token_verifier = JWTVerifier(
         jwks_uri=f"{DEX_INTERNAL_URL}/keys",
         issuer=DEX_ISSUER,
         audience=OAUTH_CLIENT_ID,
-        required_scopes=["openid"],
     )
 
-    auth = OIDCProxy(
-        # Fetch OIDC discovery doc from internal Dex URL (server-to-server).
-        # The discovered auth endpoint will use the public issuer URL,
-        # which is correct since the user's browser needs to reach Dex.
-        config_url=f"{DEX_INTERNAL_URL}/.well-known/openid-configuration",
-        client_id=OAUTH_CLIENT_ID,
-        # Public client – no secret
+    auth = OAuthProxy(
+        # Browser-facing: user's browser is redirected to the public Dex URL
+        upstream_authorization_endpoint=f"{DEX_ISSUER}/auth",
+        # Server-to-server: exchange auth code for tokens via internal URL
+        upstream_token_endpoint=f"{DEX_INTERNAL_URL}/token",
+        upstream_client_id=OAUTH_CLIENT_ID,
+        # Public client – no secret sent to Dex
         token_endpoint_auth_method="none",
         token_verifier=token_verifier,
         base_url=base_url,
+        # Required because there is no upstream_client_secret to derive from
         jwt_signing_key=OAUTH_JWT_SIGNING_KEY,
-        # openid is mandatory for Dex; included in upstream authorization requests
-        required_scopes=["openid"],
+        # Advertise openid scope to MCP clients
+        valid_scopes=["openid"],
+        # Force openid scope on EVERY upstream authorization request.
+        # This is critical: FastMCP uses client-requested scopes first,
+        # and only falls back to required_scopes if the client sends none.
+        # extra_authorize_params overrides after scope calculation, ensuring
+        # Dex always receives scope=openid regardless of what the client sent.
+        extra_authorize_params={"scope": "openid"},
         allowed_client_redirect_uris=[
             "http://localhost:*",
             "http://127.0.0.1:*",
