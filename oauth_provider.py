@@ -44,7 +44,9 @@ def create_oauth_provider() -> OIDCProxy:
         jwks_uri=f"{DEX_INTERNAL_URL}/keys",
         issuer=DEX_ISSUER,
         audience=OAUTH_CLIENT_ID,
-        required_scopes=["openid"],
+        # Dex ID tokens don't include a 'scope' claim, so we can't require scopes
+        # on the JWTVerifier. The OIDC flow already validates 'openid' implicitly
+        # by the fact that Dex only issues ID tokens for openid authorization requests.
     )
 
     auth = OIDCProxy(
@@ -58,12 +60,14 @@ def create_oauth_provider() -> OIDCProxy:
         token_verifier=token_verifier,
         base_url=base_url,
         jwt_signing_key=OAUTH_JWT_SIGNING_KEY,
-        # openid is mandatory for Dex; included in upstream authorization requests
-        required_scopes=["openid"],
         allowed_client_redirect_uris=[
             "http://localhost:*",
             "http://127.0.0.1:*",
         ],
+        # Dex mandates the `openid` scope for authorization requests.
+        # Since we removed required_scopes from the verifier (Dex ID tokens
+        # don't include a scope claim), we must explicitly request it here.
+        extra_authorize_params={"scope": "openid"},
     )
 
     return auth

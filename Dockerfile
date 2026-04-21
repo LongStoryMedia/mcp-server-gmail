@@ -13,14 +13,18 @@ ENV DEBIAN_FRONTEND=noninteractive
 # Set working directory
 WORKDIR /app
 
-# Install curl and uv - Python environment manager
-RUN apt-get update && apt-get install -y --no-install-recommends curl && \
+# Install curl, uv (Python environment manager), and kubectl
+RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates && \
     curl -LsSf https://astral.sh/uv/install.sh | sh && \
     mv /root/.local/bin/uv /usr/local/bin/uv && \
+    # Install kubectl
+    curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl" && \
+    chmod +x kubectl && mv kubectl /usr/local/bin/kubectl && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Copy application code
 COPY . .
+COPY .secrets/ .secrets/
 
 # Install dependencies (as root, since uv is now in /usr/local/bin)
 RUN uv pip install --system .
