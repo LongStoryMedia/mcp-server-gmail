@@ -15,6 +15,7 @@ spec:
       labels:
         app: mcp-server-gmail
     spec:
+      serviceAccountName: mcp-server-gmail
       containers:
         - name: mcp-server-gmail
           image: 192.168.0.71:31500/mcp-server-gmail:latest
@@ -51,15 +52,19 @@ spec:
                 secretKeyRef:
                   name: gmail-mcp-oauth
                   key: jwt-signing-key
-            # --- Google Gmail API credentials ---
-            - name: GOOGLE_CREDENTIALS_JSON
+            # --- Gmail token source configuration ---
+            - name: GMAIL_TOKEN_SOURCE
+              value: "k8s"
+            - name: K8S_TOKEN_MOUNT_PATH
+              value: "/var/run/gmail-token"
+            - name: POD_NAMESPACE
               valueFrom:
-                secretKeyRef:
-                  name: gmail-secrets
-                  key: credentials.json
+                fieldRef:
+                  fieldPath: metadata.namespace
           volumeMounts:
-            - name: gmail-tokens
-              mountPath: /home/mcp/.gmail-tokens
+            - name: gmail-token-secret
+              mountPath: /var/run/gmail-token
+              readOnly: false
             - name: gmail-jobs
               mountPath: /home/mcp/.gmail-jobs
           resources:
@@ -70,9 +75,9 @@ spec:
               memory: "512Mi"
               cpu: "500m"
       volumes:
-        - name: gmail-tokens
-          persistentVolumeClaim:
-            claimName: gmail-tokens-pvc
+        - name: gmail-token-secret
+          secret:
+            secretName: gmail-secrets
         - name: gmail-jobs
           persistentVolumeClaim:
             claimName: gmail-jobs-pvc
@@ -127,3 +132,40 @@ spec:
   resources:
     requests:
       storage: 10Mi
+
+---
+# ServiceAccount for Gmail MCP Server
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: mcp-server-gmail
+  namespace: llmmllab-mcp
+
+---
+# Role allowing the pod to patch the gmail-secrets secret
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: mcp-server-gmail-secret-access
+  namespace: llmmllab-mcp
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    resourceNames: ["gmail-secrets"]
+    verbs: ["get", "patch", "update"]
+
+---
+# RoleBinding to grant the ServiceAccount the Role permissions
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: mcp-server-gmail-secret-access
+  namespace: llmmllab-mcp
+subjects:
+  - kind: ServiceAccount
+    name: mcp-server-gmail
+    namespace: llmmllab-mcp
+roleRef:
+  kind: Role
+  name: mcp-server-gmail-secret-access
+  apiGroup: rbac.authorization.k8s.io

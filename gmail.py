@@ -1,12 +1,20 @@
 """Gmail API operations."""
 
+import os
 import pickle
 from contextlib import contextmanager
+from pathlib import Path
 from typing import Generator, Self
 from googleapiclient.discovery import build, Resource
 from google.oauth2.credentials import Credentials
 from httpx import HTTPError
-from config import TOKEN_FILE
+from config import (
+    TOKEN_FILE,
+    GMAIL_TOKEN_SOURCE,
+    K8S_TOKEN_MOUNT_PATH,
+    K8S_TOKEN_SECRET_KEY,
+    K8S_TOKEN_SECRET_NAME,
+)
 
 from pydantic import BaseModel
 
@@ -80,19 +88,32 @@ def get_credentials() -> Credentials:
     """
     Get OAuth credentials, refreshing if necessary.
 
-    For headless operation, supports GOOGLE_CREDENTIALS_JSON environment variable.
+    Supports two modes:
+    - File mode (local dev): Uses TOKEN_FILE from config
+    - K8s mode: Reads from mounted secret, updates via K8s API
+
     Returns valid Credentials object, handling refresh automatically.
     """
     from google.oauth2.credentials import Credentials as Oauth2Credentials
     from google.auth.transport.requests import Request
     from google.auth.exceptions import RefreshError
 
+    # Check if running in K8s secret mode
+    use_k8s = GMAIL_TOKEN_SOURCE == "k8s"
+
     creds = None
 
-    # Load existing token if it exists
-    if TOKEN_FILE.exists():
-        with open(TOKEN_FILE, "rb") as token_file:
-            creds = pickle.load(token_file)
+    if use_k8s:
+        # K8s mode: read from mounted secret
+        k8s_token_path = Path(K8S_TOKEN_MOUNT_PATH) / K8S_TOKEN_SECRET_KEY
+        if k8s_token_path.exists():
+            with open(k8s_token_path, "rb") as token_file:
+                creds = pickle.load(token_file)
+    else:
+        # File mode: read from local file
+        if TOKEN_FILE.exists():
+            with open(TOKEN_FILE, "rb") as token_file:
+                creds = pickle.load(token_file)
 
     # If no valid credentials, try to refresh
     if not creds or not creds.valid:
@@ -101,9 +122,12 @@ def get_credentials() -> Credentials:
                 # Attempt to refresh the token using the stored refresh_token
                 # This can succeed even if creds.expired is True
                 creds.refresh(Request())
-                # Save the refreshed credentials back to disk
-                with open(TOKEN_FILE, "wb") as token_file:
-                    pickle.dump(creds, token_file)
+                # Save the refreshed credentials
+                if use_k8s:
+                    _save_k8s_token(creds)
+                else:
+                    with open(TOKEN_FILE, "wb") as token_file:
+                        pickle.dump(creds, token_file)
                 return creds
             except RefreshError:
                 # Refresh token may have expired or been revoked
@@ -113,6 +137,53 @@ def get_credentials() -> Credentials:
         )
 
     return creds
+
+
+def _save_k8s_token(creds: Credentials) -> None:
+    """
+    Save refreshed token to K8s secret.
+    Updates the mounted secret file and patches the K8s secret.
+    """
+    import base64
+    import subprocess
+
+    k8s_token_path = Path(K8S_TOKEN_MOUNT_PATH) / K8S_TOKEN_SECRET_KEY
+
+    # Write to mounted path (if writable)
+    try:
+        with open(k8s_token_path, "wb") as f:
+            pickle.dump(creds, f)
+    except (OSError, PermissionError):
+        pass  # Mounted secrets are often read-only
+
+    # Try to patch the K8s secret via kubectl
+    try:
+        # Create temp file with updated token
+        import tempfile
+        with tempfile.NamedTemporaryFile(mode="wb", delete=False) as tmp:
+            pickle.dump(creds, tmp)
+            tmp_path = tmp.name
+
+        # Update secret using kubectl
+        result = subprocess.run(
+            [
+                "kubectl", "patch", "secret", K8S_TOKEN_SECRET_NAME,
+                "-n", os.environ.get("POD_NAMESPACE", "llmmllab-mcp"),
+                "-p", f'{{"data":{{"{K8S_TOKEN_SECRET_KEY}": "{base64.b64encode(open(tmp_path, "rb").read()).decode()}"}}}}',
+            ],
+            capture_output=True,
+            text=True,
+        )
+        if result.returncode != 0:
+            # Patch failed - may not have kubectl or permissions
+            pass
+
+        # Clean up temp file
+        import os as _os
+        _os.unlink(tmp_path)
+    except Exception:
+        # Silently ignore - token refresh still works, just won't persist to K8s secret
+        pass
 
 
 class GmailService:

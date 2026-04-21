@@ -48,6 +48,9 @@ def create_oauth_provider() -> OAuthProxy:
         jwks_uri=f"{DEX_INTERNAL_URL}/keys",
         issuer=DEX_ISSUER,
         audience=OAUTH_CLIENT_ID,
+        # Dex ID tokens don't include a 'scope' claim, so we can't require scopes
+        # on the JWTVerifier. The OIDC flow already validates 'openid' implicitly
+        # by the fact that Dex only issues ID tokens for openid authorization requests.
     )
 
     auth = OAuthProxy(
@@ -62,18 +65,14 @@ def create_oauth_provider() -> OAuthProxy:
         base_url=base_url,
         # Required because there is no upstream_client_secret to derive from
         jwt_signing_key=OAUTH_JWT_SIGNING_KEY,
-        # Advertise openid scope to MCP clients
-        valid_scopes=["openid"],
-        # Force openid scope on EVERY upstream authorization request.
-        # This is critical: FastMCP uses client-requested scopes first,
-        # and only falls back to required_scopes if the client sends none.
-        # extra_authorize_params overrides after scope calculation, ensuring
-        # Dex always receives scope=openid regardless of what the client sent.
-        extra_authorize_params={"scope": "openid"},
         allowed_client_redirect_uris=[
             "http://localhost:*",
             "http://127.0.0.1:*",
         ],
+        # Dex mandates the `openid` scope for authorization requests.
+        # Since we removed required_scopes from the verifier (Dex ID tokens
+        # don't include a scope claim), we must explicitly request it here.
+        extra_authorize_params={"scope": "openid"},
     )
 
     return auth

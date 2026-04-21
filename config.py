@@ -15,7 +15,7 @@ try:
 except ImportError:
     pass
 
-# Directories for tokens and jobs
+# Directories for tokens and jobs (local file mode)
 GMAIL_TOKENS_DIR = Path(os.environ.get("GMAIL_TOKENS_DIR", "~/.gmail-tokens")).expanduser()
 GMAIL_JOBS_DIR = Path(os.environ.get("GMAIL_JOBS_DIR", "~/.gmail-jobs")).expanduser()
 
@@ -23,6 +23,13 @@ GMAIL_JOBS_DIR = Path(os.environ.get("GMAIL_JOBS_DIR", "~/.gmail-jobs")).expandu
 CREDENTIALS_FILE = GMAIL_TOKENS_DIR / "credentials.json"
 TOKEN_FILE = GMAIL_TOKENS_DIR / "token.json"
 JOBS_FILE = GMAIL_JOBS_DIR / "jobs.json"
+
+# K8s secret mode configuration
+GMAIL_TOKEN_SOURCE = os.environ.get("GMAIL_TOKEN_SOURCE", "file")  # "file" or "k8s"
+K8S_TOKEN_SECRET_NAME = os.environ.get("K8S_TOKEN_SECRET_NAME", "gmail-secrets")
+K8S_TOKEN_SECRET_KEY = os.environ.get("K8S_TOKEN_SECRET_KEY", "token.json")
+K8S_TOKEN_MOUNT_PATH = os.environ.get("K8S_TOKEN_MOUNT_PATH", "/var/run/gmail-token")
+K8S_CREDENTIALS_SECRET_KEY = os.environ.get("K8S_CREDENTIALS_SECRET_KEY", "credentials.json")
 
 # OAuth scopes
 SCOPES = [
